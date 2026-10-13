@@ -1,0 +1,30 @@
+name: Implement issues in Playground
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue-number:
+        description: Issue number to add or refresh the Playground comment
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: playground-issue-${{ inputs.issue-number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  playground:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add Playground link to issue
+        uses: akirk/action-wp-playground-issues@main
+        with:
+          plugin-path: .
+          ref: dist/main
+          issue-number: ${{ inputs.issue-number }}
