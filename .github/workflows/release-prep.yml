@@ -1,0 +1,81 @@
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g. 1.1.2)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Validate without creating a release PR'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Validate and bump version
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          php scripts/version-bump.php --dry-run "$VERSION"
+          for tag in "$VERSION" "v$VERSION"; do
+            if git show-ref --verify --quiet "refs/tags/$tag"; then
+              echo "::error::Tag $tag already exists"
+              exit 1
+            fi
+          done
+          php scripts/version-bump.php "$VERSION"
+          RELEASE_TAG="$VERSION" php scripts/check-release-version.php
+          if git diff --quiet -- cook-app.php README.md; then
+            echo "::error::Both version fields already match $VERSION"
+            exit 1
+          fi
+          git diff -- cook-app.php README.md
+
+      - name: Dry run summary
+        if: ${{ inputs.dry_run }}
+        run: echo "Dry run completed; no release branch or PR was created."
+
+      - name: Create release PR
+        if: ${{ ! inputs.dry_run }}
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="release/$VERSION"
+          git checkout -b "$BRANCH"
+          git add cook-app.php README.md
+          git commit -m "Bump version to $VERSION"
+          git push origin "$BRANCH"
+          BODY_FILE="$RUNNER_TEMP/release-pr-body.md"
+          cat > "$BODY_FILE" <<EOF
+          Updates the plugin version and WordPress.org stable tag to $VERSION.
+
+          After merging, create a GitHub release with tag \`$VERSION\` targeting \`main\` to deploy to WordPress.org.
+          EOF
+          gh pr create --title "Release $VERSION" --body-file "$BODY_FILE" --base main --head "$BRANCH"
