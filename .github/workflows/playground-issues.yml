@@ -26,5 +26,4 @@ jobs:
         uses: akirk/action-wp-playground-issues@main
         with:
           plugin-path: .
-          ref: dist/main
           issue-number: ${{ inputs.issue-number }}
