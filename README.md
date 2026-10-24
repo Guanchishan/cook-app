@@ -5,7 +5,7 @@
 - Requires at least: 6.0
 - Requires PHP: 7.4
 - Tested up to: 7.1
-- Stable tag: 1.1.1
+- Stable tag: 1.1.1.1
 - License: GPL-2.0-or-later
 - License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -18,6 +18,10 @@ A personal cookbook for WordPress: store, import, categorize, scale, plan and sh
 Cook App gives your WordPress site a private recipe app at `/cook-app/`. Recipes are stored as WordPress content, with structured ingredients, instructions, categories, cuisines, tags, photos, serving sizes, prep and cook times, source URLs, and notes.
 
 It is built for day-to-day cooking rather than public recipe blogging: save recipes from the web, scale portions while you cook, convert between metric and imperial units, track what you have cooked, plan meals for the week, and build a shopping list from the recipes you choose.
+
+### Private app access
+
+Anonymous requests to Cook App pages return an uncacheable 404 without a login link or redirect. This prevents the app from disclosing a custom login URL configured by plugins such as WPS Hide Login. Sign in through your site's usual login entry before opening Cook App. Signed-in access checks and REST API permissions still apply; this does not protect public media URLs.
 
 ### Recipe storage
 
