@@ -1,0 +1,49 @@
+name: Guanchishan fork release
+
+on:
+  push:
+    tags:
+      - 'guanchishan-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository == 'Guanchishan/cook-app' && startsWith(github.ref, 'refs/tags/guanchishan-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: zip
+          tools: composer
+      - name: Validate and test
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          php scripts/check-release-version.php
+          composer install --no-interaction --prefer-dist
+          composer lint
+          composer test
+      - name: Build installable plugin
+        run: |
+          mkdir -p build/cook-app
+          git archive HEAD | tar -x -C build/cook-app
+          composer install --working-dir=build/cook-app --no-dev --optimize-autoloader --no-interaction --no-scripts --no-plugins
+          cd build
+          zip -qr cook-app.zip cook-app
+          sha256sum cook-app.zip > cook-app.zip.sha256
+      - name: Publish fork release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          cat > "$RUNNER_TEMP/release-notes.md" <<'NOTES'
+          Anonymous Cook App pages return a non-cacheable 404 without exposing the site's login URL. Signed-in access and REST permissions are unchanged.
+
+          Install cook-app.zip as a plugin update. This is a Guanchishan fork release, not an official upstream release. The fourth numeric version component identifies the fork revision. See docs/fork-releases.md for version and update policy.
+          NOTES
+          gh release create "$RELEASE_TAG" build/cook-app.zip build/cook-app.zip.sha256 --verify-tag --title "Cook App $RELEASE_TAG" --notes-file "$RUNNER_TEMP/release-notes.md"

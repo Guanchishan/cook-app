@@ -15,7 +15,7 @@ if ($plugin_version !== $stable_tag) {
 }
 $release_tag = getenv('RELEASE_TAG');
 if ($release_tag !== false && $release_tag !== '') {
-    $release_version = preg_replace('/^v/', '', $release_tag);
+    $release_version = preg_replace('/^(?:guanchishan-)?v/', '', $release_tag);
     if ($plugin_version !== $release_version) {
         fwrite(STDERR, "Version mismatch: release tag={$release_tag}, cook-app.php={$plugin_version}, README.md Stable tag={$stable_tag}. Update both files to match the release.\n");
         exit(2);
